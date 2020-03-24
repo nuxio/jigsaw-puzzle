@@ -85,19 +85,19 @@ export default function getMask({
   //Bottom
   const bottomRightEdge = topRightEdge.add(new Point(0, tileWidth));
   for (let i = 0; i < curvyCoords.length / 6; i++) {
-    const p1 = bottomRightEdge.add(
+    const p1 = bottomRightEdge.subtract(
       new Point(
         curvyCoords[i * 6 + 0] * tileRatio,
         bottomTab * curvyCoords[i * 6 + 1] * tileRatio
       )
     );
-    const p2 = bottomRightEdge.add(
+    const p2 = bottomRightEdge.subtract(
       new Point(
         curvyCoords[i * 6 + 2] * tileRatio,
         bottomTab * curvyCoords[i * 6 + 3] * tileRatio
       )
     );
-    const p3 = bottomRightEdge.add(
+    const p3 = bottomRightEdge.subtract(
       new Point(
         curvyCoords[i * 6 + 4] * tileRatio,
         bottomTab * curvyCoords[i * 6 + 5] * tileRatio
@@ -108,21 +108,21 @@ export default function getMask({
   }
 
   //Left
-  const bottomLeftEdge = bottomRightEdge.add(new Point(tileWidth, 0));
+  const bottomLeftEdge = bottomRightEdge.subtract(new Point(tileWidth, 0));
   for (let i = 0; i < curvyCoords.length / 6; i++) {
-    const p1 = bottomLeftEdge.add(
+    const p1 = bottomLeftEdge.subtract(
       new Point(
         -leftTab * curvyCoords[i * 6 + 1] * tileRatio,
         curvyCoords[i * 6 + 0] * tileRatio
       )
     );
-    const p2 = bottomLeftEdge.add(
+    const p2 = bottomLeftEdge.subtract(
       new Point(
         -leftTab * curvyCoords[i * 6 + 3] * tileRatio,
         curvyCoords[i * 6 + 2] * tileRatio
       )
     );
-    const p3 = bottomLeftEdge.add(
+    const p3 = bottomLeftEdge.subtract(
       new Point(
         -leftTab * curvyCoords[i * 6 + 5] * tileRatio,
         curvyCoords[i * 6 + 4] * tileRatio

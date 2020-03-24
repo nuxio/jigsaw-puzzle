@@ -13,7 +13,7 @@ const App: React.FC = () => {
   const initPuzzle = useCallback(() => {
     const puzzle = new JigsawPuzzle({
       image: image.current as HTMLImageElement,
-      tileSize: 50
+      tileSize: 100
     });
     console.log(puzzle);
   }, []);

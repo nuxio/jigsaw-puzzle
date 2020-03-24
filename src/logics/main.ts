@@ -1,7 +1,7 @@
-import Paper, {Raster, Color, Rectangle, Point, Group} from "paper";
+import Paper, {Raster, Color, Rectangle, Point, Group, view} from "paper";
 
 import getMask from "./mask";
-import getRandomShapes, { IShape } from "./shape";
+import getRandomShapes, {IShape} from "./shape";
 
 interface IJigsawPuzzleParams {
   tileSize: number; // 拼图块的大小
@@ -46,18 +46,21 @@ export default class JigsawPuzzle {
     for (let y = 0; y < this.tilesRowCount; y++) {
       for (let x = 0; x < this.tilesColCount; x++) {
         const shape = shapes[y * this.tilesColCount + x];
-        const img = this.getTileRaster(cloneImage, new Point(this.tileSize * x, this.tileSize * y));
+        const img = this.getTileRaster(
+          cloneImage,
+          new Point(this.tileSize * x, this.tileSize * y)
+        );
         const mask = getMask({
           tileRatio: ratio,
           ...shape,
           tileWidth: this.tileSize
         });
-        
+
         mask.opacity = 0.25;
         mask.strokeColor = new Color("#fff");
 
         const border = mask.clone();
-        border.strokeColor = new Color('#ccc');
+        border.strokeColor = new Color("#ccc");
         border.strokeWidth = 5;
 
         const tile: ITile = new Group([mask, border, img, border]);
@@ -72,13 +75,41 @@ export default class JigsawPuzzle {
       }
     }
 
+    for (let y = 0; y < this.tilesRowCount; y++) {
+      for (let x = 0; x < this.tilesColCount; x++) {
+        const index1 = Math.floor(Math.random() * indexes.length);
+        const index2 = indexes[index1];
+        const tile = tiles[index2];
+
+        indexes.splice(index1, 1);
+
+        const position = view.center
+          .subtract(new Point(this.tileSize, this.tileSize / 2))
+          .add(new Point(this.tileSize * (x * 2 + (y % 2)), this.tileSize * y))
+          .subtract(
+            new Point(
+              this.puzzleImage.size.width,
+              this.puzzleImage.size.height / 2
+            )
+          );
+        const cellPosition = new Point(
+          Math.round(position.x / this.tileSize) + 1,
+          Math.round(position.y / this.tileSize) + 1
+        );
+
+        tile.position = cellPosition.multiply(this.tileSize);
+        // @ts-ignore
+        tile.cellPosition = cellPosition;
+      }
+    }
+
     return tiles;
   }
 
   getTileRaster(image: paper.Raster, offset: paper.Point) {
-    const result = new Raster("empty");
+    // const result = new Raster("empty");
     const realSize = this.tileSize + this.tileMarginWidth * 2;
-    const data = image.getImageData(
+    const result = image.getSubRaster(
       new Rectangle(
         offset.x - this.tileMarginWidth,
         offset.y - this.tileMarginWidth,
@@ -86,10 +117,7 @@ export default class JigsawPuzzle {
         realSize
       )
     );
-
-    result.setImageData(data, new Point(0, 0));
-    result.position = new Point(28, 36);
-
+    result.position = new Point(this.tileSize / 2, this.tileSize / 2); // TODO
     return result;
   }
 }

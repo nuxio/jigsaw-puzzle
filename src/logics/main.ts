@@ -1,4 +1,4 @@
-import Paper, {Raster, Color, Rectangle, Point, Group, view} from "paper";
+import Paper, {Raster, Color, Rectangle, Point, Group, view, Tool} from "paper";
 
 import getMask from "./mask";
 import getRandomShapes, {IShape} from "./shape";
@@ -14,18 +14,19 @@ interface ITile extends paper.Group {
 }
 
 export default class JigsawPuzzle {
-  tileSize: number; // 拼图块的尺寸
-  puzzleImage: paper.Raster;
-  tilesColCount: number; // 拼图列数
-  tilesRowCount: number; // 行数
-  tileMarginWidth: number; // 拼图块的边框宽度
-  tiles: ITile[];
+  private tileSize: number; // 拼图块的尺寸
+  private puzzleImage: paper.Raster;
+  private tilesColCount: number; // 拼图列数
+  private tilesRowCount: number; // 行数
+  private tileMarginWidth: number; // 拼图块的边框宽度
+  private tiles: ITile[];
+  private tool: paper.Tool;
+  private selectedTile: ITile | null;
 
-  zoom = 1;
-  zoomScaleOnDrag = 1.25;
-  selectedTile = null;
-  selectedTileIndex = -1;
-  selectionGroup = null;
+  private zoom = 1;
+  private zoomScaleOnDrag = 1.25;
+  private selectedTileIndex = -1;
+  private selectionGroup = null;
 
   constructor({tileSize = 64, image}: IJigsawPuzzleParams) {
     this.tileSize = tileSize;
@@ -34,6 +35,12 @@ export default class JigsawPuzzle {
     this.tilesRowCount = Math.ceil(image.height / tileSize);
     this.tileMarginWidth = tileSize * 0.203125;
     this.tiles = this.createTiles();
+    this.tool = new Tool();
+
+    this.tool.onMouseMove = this.handleMouseMove.bind(this);
+    this.tool.onMouseUp = this.handleMouseUp.bind(this);
+
+    this.selectedTile = null;
   }
 
   createTiles(): ITile[] {
@@ -69,6 +76,9 @@ export default class JigsawPuzzle {
 
         tile.shape = shape;
         tile.imagePosition = new Point(x, y);
+        tile.onMouseDown = () => {
+          this.handleSelectTile(tile);
+        };
 
         tiles.push(tile);
         indexes.push(indexes.length);
@@ -119,5 +129,24 @@ export default class JigsawPuzzle {
     );
     result.position = new Point(this.tileSize / 2, this.tileSize / 2); // TODO
     return result;
+  }
+
+  handleSelectTile(tile: ITile) {
+    this.selectedTile = tile;
+  }
+
+  handleMouseMove(event: paper.MouseEvent) {
+    if (!this.selectedTile) {
+      return;
+    }
+    this.selectedTile.position.add(event.delta);
+  }
+
+  handleMouseUp(event: any) {
+    if (!this.selectedTile) {
+      return;
+    }
+
+    this.selectedTile = null;
   }
 }

@@ -9,9 +9,11 @@ import "./App.css";
 const App: React.FC = () => {
   const canvas = useRef<HTMLCanvasElement>(null);
   const image = useRef<HTMLImageElement>(null);
+  const puzzle = useRef<JigsawPuzzle>(null);
 
   const initPuzzle = useCallback(() => {
-    const puzzle = new JigsawPuzzle({
+    // @ts-ignore
+    puzzle.current = new JigsawPuzzle({
       image: image.current as HTMLImageElement,
       tileSize: 100
     });

@@ -1,4 +1,13 @@
-import Paper, {Raster, Color, Rectangle, Point, Group, view, Tool} from "paper";
+import Paper, {
+  Raster,
+  Color,
+  Rectangle,
+  Point,
+  Group,
+  view,
+  Tool,
+  project
+} from "paper";
 
 import getMask from "./mask";
 import getRandomShapes, {IShape} from "./shape";
@@ -21,7 +30,7 @@ export default class JigsawPuzzle {
   private tileMarginWidth: number; // 拼图块的边框宽度
   private tiles: ITile[];
   private tool: paper.Tool;
-  private selectedTile: ITile | null;
+  private selectedTile: any | null;
 
   private zoom = 1;
   private zoomScaleOnDrag = 1.25;
@@ -37,7 +46,9 @@ export default class JigsawPuzzle {
     this.tiles = this.createTiles();
     this.tool = new Tool();
 
+    this.tool.onMouseDown = this.handleMouseDown.bind(this);
     this.tool.onMouseMove = this.handleMouseMove.bind(this);
+    this.tool.onMouseDrag = this.handleMouseDrag.bind(this);
     this.tool.onMouseUp = this.handleMouseUp.bind(this);
 
     this.selectedTile = null;
@@ -76,9 +87,6 @@ export default class JigsawPuzzle {
 
         tile.shape = shape;
         tile.imagePosition = new Point(x, y);
-        tile.onMouseDown = () => {
-          this.handleSelectTile(tile);
-        };
 
         tiles.push(tile);
         indexes.push(indexes.length);
@@ -131,15 +139,31 @@ export default class JigsawPuzzle {
     return result;
   }
 
-  handleSelectTile(tile: ITile) {
-    this.selectedTile = tile;
+  handleMouseDown(event: paper.MouseEvent) {
+    const hitResult = project.hitTest(event.point, {
+      fill: true,
+      stroke: false,
+      segments: false
+    });
+    if (hitResult && hitResult.item) {
+      this.selectedTile = hitResult.item.parent;
+    }
   }
 
-  handleMouseMove(event: paper.MouseEvent) {
-    if (!this.selectedTile) {
-      return;
+  handleMouseMove(event: paper.ToolEvent) {
+    project.activeLayer.selected = false;
+    if (event.item) event.item.selected = true;
+    // if (!this.selectedTile) {
+    //   return;
+    // }
+    // this.selectedTile.position.add(event.delta);
+  }
+
+  handleMouseDrag(event: paper.ToolEvent) {
+    console.log(this.selectedTile);
+    if (this.selectedTile) {
+      this.selectedTile.position = this.selectedTile.position.add(event.delta);
     }
-    this.selectedTile.position.add(event.delta);
   }
 
   handleMouseUp(event: any) {

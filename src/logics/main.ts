@@ -18,8 +18,10 @@ interface IJigsawPuzzleParams {
 }
 
 interface ITile extends paper.Group {
-  shape?: IShape;
+  shape: IShape;
+  cellPosition: paper.Point;
   imagePosition?: paper.Point;
+  lastScale?: number;
 }
 
 export default class JigsawPuzzle {
@@ -30,12 +32,11 @@ export default class JigsawPuzzle {
   private tileMarginWidth: number; // 拼图块的边框宽度
   private tiles: ITile[];
   private tool: paper.Tool;
-  private selectedTile: any | null;
+  private selectedTile: ITile | null;
+  // private selectionGroup: paper.Group | null;
 
   private zoom = 1;
   private zoomScaleOnDrag = 1.25;
-  private selectedTileIndex = -1;
-  private selectionGroup = null;
 
   constructor({tileSize = 64, image}: IJigsawPuzzleParams) {
     this.tileSize = tileSize;
@@ -52,6 +53,7 @@ export default class JigsawPuzzle {
     this.tool.onMouseUp = this.handleMouseUp.bind(this);
 
     this.selectedTile = null;
+    // this.selectionGroup = null;
   }
 
   createTiles(): ITile[] {
@@ -81,7 +83,7 @@ export default class JigsawPuzzle {
         border.strokeColor = new Color("#ccc");
         border.strokeWidth = 5;
 
-        const tile: ITile = new Group([mask, border, img, border]);
+        const tile: ITile = new Group([mask, border, img, border]) as ITile;
         tile.clipped = true; // 蒙版效果，将mask应用于小方块，显示出曲型边框
         tile.opacity = 1;
 
@@ -116,7 +118,6 @@ export default class JigsawPuzzle {
         );
 
         tile.position = cellPosition.multiply(this.tileSize);
-        // @ts-ignore
         tile.cellPosition = cellPosition;
       }
     }
@@ -139,38 +140,131 @@ export default class JigsawPuzzle {
     return result;
   }
 
-  handleMouseDown(event: paper.MouseEvent) {
-    const hitResult = project.hitTest(event.point, {
-      fill: true,
-      stroke: false,
-      segments: false
-    });
-    if (hitResult && hitResult.item) {
-      this.selectedTile = hitResult.item.parent;
+  getTileAtCellPosition(point: paper.Point) {
+    return this.tiles.find(item => item.cellPosition.equals(point));
+  }
+
+  handleMouseDown(event: paper.ToolEvent) {
+    if (this.selectedTile) {
+      // 按下缩放
+      if (!this.selectedTile.lastScale) {
+        this.selectedTile.lastScale = this.zoomScaleOnDrag;
+        this.selectedTile.scale(this.zoomScaleOnDrag);
+      } else {
+        if (this.selectedTile.lastScale > 1) {
+          this.handleMouseUp();
+          return;
+        }
+      }
+
+      // this.selectedTile.cellPosition = undefined;
+
+      // this.selectionGroup = new Group(this.selectedTile);
+
+      // const pos = new Point(
+      //   this.selectedTile.position.x,
+      //   this.selectedTile.position.y
+      // );
+      // this.selectedTile.position = new Point(0, 0);
+      // this.selectionGroup.position = pos;
     }
   }
 
   handleMouseMove(event: paper.ToolEvent) {
-    project.activeLayer.selected = false;
-    if (event.item) event.item.selected = true;
-    // if (!this.selectedTile) {
-    //   return;
-    // }
-    // this.selectedTile.position.add(event.delta);
-  }
+    if (this.selectedTile && event.item && this.selectedTile === event.item) {
+      return;
+    }
 
-  handleMouseDrag(event: paper.ToolEvent) {
-    console.log(this.selectedTile);
     if (this.selectedTile) {
-      this.selectedTile.position = this.selectedTile.position.add(event.delta);
+      this.selectedTile.opacity = 1;
+    }
+
+    if (event.item) {
+      this.selectedTile = event.item as ITile;
+      this.selectedTile.opacity = 0.5;
+    } else {
+      this.selectedTile = null;
     }
   }
 
-  handleMouseUp(event: any) {
+  handleMouseDrag(event: paper.ToolEvent) {
+    // if (this.selectedTile && this.selectionGroup) {
+      // this.selectionGroup.position = this.selectionGroup.position.add(
+      //   event.delta
+      // );
+    if (this.selectedTile) {
+      this.selectedTile.position = this.selectedTile.position.add(event.delta);
+      this.selectedTile.opacity = 1;
+    } else {
+      // var currentScroll = view.currentScroll - delta * this.currentZoom;
+      // view.scrollBy(currentScroll);
+      // view.currentScroll = currentScroll;
+    }
+  }
+
+  handleMouseUp() {
     if (!this.selectedTile) {
       return;
     }
 
-    this.selectedTile = null;
+    const cellPosition = new Point(
+      Math.round(this.selectedTile.position.x / this.tileSize),
+      Math.round(this.selectedTile.position.y / this.tileSize)
+    );
+    const roundPosition = cellPosition.multiply(this.tileSize);
+    let hasConflict = false;
+
+    const alreadyPlacedTile = this.getTileAtCellPosition(cellPosition);
+    const topTile = this.getTileAtCellPosition(
+      cellPosition.add(new Point(0, -1))
+    );
+    const rightTile = this.getTileAtCellPosition(
+      cellPosition.add(new Point(1, 0))
+    );
+    const bottomTile = this.getTileAtCellPosition(
+      cellPosition.add(new Point(0, 1))
+    );
+    const leftTile = this.getTileAtCellPosition(
+      cellPosition.add(new Point(-1, 0))
+    );
+
+    hasConflict = !!alreadyPlacedTile;
+
+    // 通过形状是否互补判断位置是否正确
+    if (topTile) {
+      hasConflict =
+        hasConflict ||
+        !(topTile.shape.bottomTab + this.selectedTile.shape.topTab === 0);
+    }
+
+    if (rightTile) {
+      hasConflict =
+        hasConflict ||
+        !(rightTile.shape.leftTab + this.selectedTile.shape.rightTab === 0);
+    }
+
+    if (bottomTile) {
+      hasConflict =
+        hasConflict ||
+        !(bottomTile.shape.topTab + this.selectedTile.shape.bottomTab === 0);
+    }
+
+    if (leftTile) {
+      hasConflict =
+        hasConflict ||
+        !(leftTile.shape.rightTab + this.selectedTile.shape.leftTab === 0);
+    }
+
+    // 形状互补
+    if (!hasConflict) {
+      if (this.selectedTile.lastScale) {
+        this.selectedTile.scale(1 / this.selectedTile.lastScale);
+        this.selectedTile.lastScale = 0;
+      }
+
+      this.selectedTile.position = roundPosition;
+      this.selectedTile.cellPosition = cellPosition;
+      this.selectedTile = null;
+    }
   }
 }
